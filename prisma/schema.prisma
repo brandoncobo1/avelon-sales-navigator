@@ -1,0 +1,113 @@
+// Avelon Sales Navigator — data model
+// Postgres (Neon, via the Vercel Marketplace). DATABASE_URL is the pooled
+// connection string (used at runtime); DIRECT_URL is the unpooled one,
+// used only for migrations.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ---------------------------------------------------------------------------
+// Conversation script (editable via the Conversation Builder, not code)
+// ---------------------------------------------------------------------------
+
+model Branch {
+  id             String  @id @default(cuid())
+  title          String
+  speaker        String // "receptionist" | "decision_maker" | "rep" | "system"
+  type           String // BranchType — see src/lib/types.ts
+  stage          String // grouping used for filtering in the Builder, e.g. "root", "receptionist-software"
+  trigger        String // when to pick this branch — shown to the rep as the button/context
+  responseText   String // the line the rep should say
+  responseAlt    String? // optional alternative phrasing
+  objective      String // what this line is trying to learn/achieve
+  notes          String?
+  warning        String?
+  tags           String  @default("[]") // JSON string array
+  nextBranchIds  String  @default("[]") // JSON string array of Branch.id
+  previousBranchId String?
+  order          Int     @default(0)
+  isRoot         Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stage])
+  @@index([previousBranchId])
+}
+
+// ---------------------------------------------------------------------------
+// Clinics (call targets)
+// ---------------------------------------------------------------------------
+
+model Clinic {
+  id             String   @id @default(cuid())
+  name           String
+  website        String?
+  phone          String?
+  location       String?
+  hasCustomAsset Boolean  @default(false)
+  practiceNotes  String?
+  isDemo         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  calls Call[]
+}
+
+// ---------------------------------------------------------------------------
+// Calls
+// ---------------------------------------------------------------------------
+
+model Call {
+  id                  String    @id @default(cuid())
+  clinicId            String
+  clinic              Clinic    @relation(fields: [clinicId], references: [id])
+  clinicNameSnapshot  String
+  status              String    @default("LIVE") // LIVE | PAUSED | ENDED
+  startedAt           DateTime  @default(now())
+  endedAt             DateTime?
+  currentBranchId     String?
+  speaker             String    @default("receptionist")
+
+  outcome              String? // discovery_booked | decision_maker_reached | callback | sent_info | not_interested | wrong_number | no_decision_maker | other
+  decisionMakerReached Boolean @default(false)
+  transferred          Boolean @default(false)
+  callbackScheduled    Boolean @default(false)
+  discoveryBooked      Boolean @default(false)
+  outcomeNotes         String?
+
+  createdAt DateTime @default(now())
+
+  events CallEvent[]
+  notes  Note[]
+
+  @@index([clinicId])
+  @@index([status])
+}
+
+model CallEvent {
+  id         String   @id @default(cuid())
+  callId     String
+  call       Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  branchId   String
+  timestamp  DateTime @default(now())
+  selectedBy String   @default("rep") // "rep" | "ai"
+
+  @@index([callId])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  callId    String
+  call      Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  text      String
+  timestamp DateTime @default(now())
+
+  @@index([callId])
+}

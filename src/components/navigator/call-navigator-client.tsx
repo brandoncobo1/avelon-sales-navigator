@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { StickyNote, RotateCcw, ArrowLeft, AlertTriangle, Search, Sparkles } from "lucide-react";
+import { StickyNote, RotateCcw, ArrowLeft, AlertTriangle, Search, Sparkles, ShieldAlert } from "lucide-react";
 import type {
   AiSuggestionRecord,
   Branch,
@@ -26,6 +26,7 @@ import { OutcomeModal, type FollowUpInput } from "@/components/navigator/outcome
 import { KeyboardLegend } from "@/components/navigator/keyboard-legend";
 import { StateHeader } from "@/components/navigator/state-header";
 import { DoNotPitchBanner } from "@/components/navigator/do-not-pitch-banner";
+import { ConfidenceModeBanner } from "@/components/navigator/confidence-mode-banner";
 import { CoachPanel } from "@/components/navigator/coach-panel";
 import { ChooseBranchModal } from "@/components/navigator/choose-branch-modal";
 import { TranscriptPanel } from "@/components/navigator/transcript-panel";
@@ -66,6 +67,8 @@ export function CallNavigatorClient({
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [outcomeModalOpen, setOutcomeModalOpen] = useState(false);
   const [chooseBranchOpen, setChooseBranchOpen] = useState(false);
+  const [chooseBranchObjectionsOnly, setChooseBranchObjectionsOnly] = useState(false);
+  const [confidenceBannerDismissed, setConfidenceBannerDismissed] = useState(false);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptChunkRecord[]>(call.transcript);
   const [suggestions, setSuggestions] = useState<AiSuggestionRecord[]>(call.aiSuggestions);
@@ -315,6 +318,9 @@ export function CallNavigatorClient({
         setNoteModalOpen(true);
       } else if (e.key === "e" || e.key === "E") {
         setOutcomeModalOpen(true);
+      } else if (e.key === "o" || e.key === "O") {
+        setChooseBranchObjectionsOnly(true);
+        setChooseBranchOpen(true);
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -367,11 +373,26 @@ export function CallNavigatorClient({
               </span>
               <button
                 type="button"
-                onClick={() => setChooseBranchOpen(true)}
+                onClick={() => {
+                  setChooseBranchObjectionsOnly(false);
+                  setChooseBranchOpen(true);
+                }}
                 className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-white/60 hover:bg-white/[0.08]"
               >
                 <Search className="h-3 w-3" />
                 Choose branch
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChooseBranchObjectionsOnly(true);
+                  setChooseBranchOpen(true);
+                }}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-300 hover:bg-indigo-500/20"
+                title="Search all objections (shortcut: O)"
+              >
+                <ShieldAlert className="h-3 w-3" />
+                Objections
               </button>
               <button
                 type="button"
@@ -385,6 +406,10 @@ export function CallNavigatorClient({
             </div>
             <Breadcrumb trail={trail} onJump={handleJump} onHome={() => handleJump(0)} />
           </div>
+
+          {!confidenceBannerDismissed && (
+            <ConfidenceModeBanner onDismiss={() => setConfidenceBannerDismissed(true)} />
+          )}
 
           <StateHeader trail={trail} goal={goal} />
 
@@ -469,7 +494,12 @@ export function CallNavigatorClient({
         <OutcomeModal onClose={() => setOutcomeModalOpen(false)} onSave={handleSaveOutcome} />
       )}
       {chooseBranchOpen && (
-        <ChooseBranchModal branches={branches} onSelect={handleSelect} onClose={() => setChooseBranchOpen(false)} />
+        <ChooseBranchModal
+          branches={branches}
+          onSelect={handleSelect}
+          onClose={() => setChooseBranchOpen(false)}
+          defaultObjectionsOnly={chooseBranchObjectionsOnly}
+        />
       )}
     </div>
   );

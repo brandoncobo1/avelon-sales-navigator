@@ -9,17 +9,25 @@ export function ChooseBranchModal({
   branches,
   onSelect,
   onClose,
+  defaultObjectionsOnly = false,
 }: {
   branches: Branch[];
   onSelect: (branch: Branch) => void;
   onClose: () => void;
+  defaultObjectionsOnly?: boolean;
 }) {
   const [query, setQuery] = useState("");
+  const [objectionsOnly, setObjectionsOnly] = useState(defaultObjectionsOnly);
+
+  const scoped = useMemo(
+    () => (objectionsOnly ? branches.filter((b) => b.type === "OBJECTION") : branches),
+    [branches, objectionsOnly],
+  );
 
   const results = useMemo(() => {
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (words.length === 0) return branches.slice(0, 30);
-    return branches
+    if (words.length === 0) return scoped.slice(0, 30);
+    return scoped
       .filter((b) => {
         const haystack = [b.title, b.trigger, b.objective, b.category, b.stage, b.id, ...b.tags, ...b.aiKeywords]
           .join(" ")
@@ -30,7 +38,7 @@ export function ChooseBranchModal({
         return words.every((w) => haystack.includes(w));
       })
       .slice(0, 40);
-  }, [branches, query]);
+  }, [scoped, query]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-16 md:pt-24">
@@ -41,7 +49,7 @@ export function ChooseBranchModal({
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by title, trigger, keyword, objective, category..."
+            placeholder={objectionsOnly ? "Search objections..." : "Search by title, trigger, keyword, objective, category..."}
             className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
           />
           <button
@@ -50,6 +58,26 @@ export function ChooseBranchModal({
             className="shrink-0 cursor-pointer rounded-lg p-1 text-white/40 hover:text-white/80"
           >
             <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+          <button
+            type="button"
+            onClick={() => setObjectionsOnly(false)}
+            className={`cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors duration-150 ${
+              !objectionsOnly ? "bg-white/[0.1] text-white" : "text-white/40 hover:text-white/70"
+            }`}
+          >
+            All branches
+          </button>
+          <button
+            type="button"
+            onClick={() => setObjectionsOnly(true)}
+            className={`cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors duration-150 ${
+              objectionsOnly ? "bg-indigo-500/20 text-indigo-300" : "text-white/40 hover:text-white/70"
+            }`}
+          >
+            Objections only
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-2">

@@ -14,6 +14,10 @@ export interface CoachResult {
 export function heuristicCoach(currentBranch: Branch | null, visitedBranches: Branch[]): CoachResult {
   const painEstablished = visitedBranches.some((b) => b.tags.includes("pain-discovery"));
   const lastVisited = visitedBranches[visitedBranches.length - 1];
+  // visitedBranches includes currentBranch as its last entry (the caller
+  // builds the trail through the active branch), so "earlier in the call"
+  // means everything before that final entry.
+  const priorBranches = visitedBranches.slice(0, -1);
 
   if (currentBranch?.type === "DECISION_MAKER" && !painEstablished) {
     return {
@@ -23,12 +27,43 @@ export function heuristicCoach(currentBranch: Branch | null, visitedBranches: Br
     };
   }
 
+  // Over-aggression nudge — the same objection (by classification, when
+  // set, else by objection type) has already come up once this call. Coming
+  // back to it a second time usually means it wasn't actually addressed the
+  // first time, not that repeating the same push will land better.
+  if (currentBranch?.type === "OBJECTION") {
+    const key = currentBranch.classification ?? currentBranch.objectionType;
+    const repeated = key && priorBranches.some((b) => b.type === "OBJECTION" && (b.classification ?? b.objectionType) === key);
+    if (repeated) {
+      return {
+        situation: "This same objection came up earlier in the call too.",
+        recommendedQuestion: "Slow down and actually address what's behind it this time, rather than pushing past it again.",
+        doNotPitchYet: false,
+      };
+    }
+  }
+
   if (lastVisited?.type === "OBJECTION" && currentBranch?.id === lastVisited.id) {
     return {
       situation: "They just raised an objection.",
       recommendedQuestion: "Acknowledge it, then ask a clarifying question before you respond — don't argue.",
       doNotPitchYet: false,
     };
+  }
+
+  // Retreating nudge — wrapping up right after a genuine (non-brush-off)
+  // objection when the script actually offered a way to keep the
+  // conversation going. Worth a beat to check this is a real "no", not an
+  // early fold.
+  if (currentBranch && (currentBranch.type === "EXIT" || currentBranch.type === "CALLBACK")) {
+    const previous = priorBranches[priorBranches.length - 1];
+    if (previous?.type === "OBJECTION" && previous.classification !== "receptionist_brush_off" && previous.nextBranchIds.length > 1) {
+      return {
+        situation: "Wrapping up right after a real objection.",
+        recommendedQuestion: "Double check this is a genuine no, not an early retreat — the script had another way to keep going here.",
+        doNotPitchYet: false,
+      };
+    }
   }
 
   if (currentBranch?.type === "SUCCESS") {

@@ -49,7 +49,8 @@ export default async function BranchQualityPage() {
       <h1 className="mt-4 text-2xl font-semibold text-white">Branch Quality</h1>
       <p className="mt-1 text-sm text-white/50">
         Runs automatically on every seed. Duplicate ids/titles, orphans, dead branches, broken
-        transitions, self-loops, impossible transitions, and missing required fields.
+        transitions, self-loops, impossible transitions, missing required fields, and content
+        contamination between unrelated branches.
       </p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">

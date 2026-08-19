@@ -35,6 +35,8 @@ export async function POST(request: NextRequest) {
     isRoot: body.isRoot ?? false,
     outcome: body.outcome ?? null,
     objectionType: body.objectionType ?? null,
+    classification: body.classification ?? null,
+    whyItWorks: body.whyItWorks ?? null,
     aiConfidenceThreshold: body.aiConfidenceThreshold ?? null,
     branchPriority: body.branchPriority ?? 0,
     abTestGroup: body.abTestGroup ?? null,

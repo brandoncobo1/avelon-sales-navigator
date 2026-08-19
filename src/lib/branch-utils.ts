@@ -1,5 +1,13 @@
 import type { Branch as BranchRow } from "@prisma/client";
-import type { Branch, BranchInput, BranchType, CallOutcome, ObjectionType, Speaker } from "@/lib/types";
+import type {
+  Branch,
+  BranchInput,
+  BranchType,
+  CallOutcome,
+  ObjectionClassification,
+  ObjectionType,
+  Speaker,
+} from "@/lib/types";
 
 function parseJsonArray(value: string): string[] {
   try {
@@ -33,6 +41,8 @@ export function toBranch(row: BranchRow): Branch {
     terminal: row.terminal,
     outcome: row.outcome as CallOutcome | null,
     objectionType: row.objectionType as ObjectionType | null,
+    classification: row.classification as ObjectionClassification | null,
+    whyItWorks: row.whyItWorks,
     aiConfidenceThreshold: row.aiConfidenceThreshold,
     branchPriority: row.branchPriority,
     abTestGroup: row.abTestGroup,

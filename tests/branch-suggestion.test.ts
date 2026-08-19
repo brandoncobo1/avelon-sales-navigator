@@ -26,6 +26,8 @@ function makeBranch(overrides: Partial<Branch>): Branch {
     terminal: false,
     outcome: null,
     objectionType: null,
+    classification: null,
+    whyItWorks: null,
     aiConfidenceThreshold: null,
     branchPriority: 0,
     abTestGroup: null,

@@ -1,10 +1,27 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowDown, StickyNote, FileText, CalendarClock, Bot, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowDown, StickyNote, FileText, CalendarClock, Bot, Sparkles, Gauge } from "lucide-react";
 import { getCall } from "@/lib/calls";
 import { getAllBranches } from "@/lib/branches";
 import { CALL_OUTCOMES } from "@/lib/types";
 import { BranchTypeBadge } from "@/components/ui/branch-type-badge";
+import type { ConfidenceBreakdown } from "@/lib/confidence-score";
+
+function parseConfidenceBreakdown(raw: string | null): ConfidenceBreakdown | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as ConfidenceBreakdown;
+  } catch {
+    return null;
+  }
+}
+
+function scoreColor(score: number) {
+  if (score >= 80) return "text-emerald-300";
+  if (score >= 60) return "text-sky-300";
+  if (score >= 40) return "text-amber-300";
+  return "text-rose-300";
+}
 
 function formatDuration(startedAt: string, endedAt: string | null) {
   if (!endedAt) return "In progress";
@@ -27,6 +44,7 @@ export default async function CallDetailPage({
   const outcomeLabel = call.outcome
     ? CALL_OUTCOMES.find((o) => o.value === call.outcome)?.label ?? call.outcome
     : null;
+  const confidence = parseConfidenceBreakdown(call.confidenceBreakdown);
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 md:px-8 md:py-10">
@@ -68,6 +86,33 @@ export default async function CallDetailPage({
         <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-white/40">Outcome notes</p>
           <p className="mt-1 text-sm text-white/70">{call.outcomeNotes}</p>
+        </div>
+      )}
+
+      {confidence && (
+        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-white/40">
+              <Gauge className="h-3.5 w-3.5" />
+              Confidence &amp; assertiveness
+            </div>
+            <span className={`text-2xl font-bold ${scoreColor(confidence.total)}`}>{confidence.total}</span>
+          </div>
+          <p className="mt-1 text-sm font-semibold text-white/80">{confidence.band}</p>
+          <p className="text-xs text-white/45">{confidence.bandDetail}</p>
+          <div className="mt-3 space-y-2">
+            {confidence.components.map((c) => (
+              <div key={c.key} className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-semibold text-white/70">{c.label}</span>
+                  <span className="font-mono text-white/50">
+                    {c.score}/{c.max}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[11px] text-white/40">{c.detail}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

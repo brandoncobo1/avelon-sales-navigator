@@ -39,6 +39,8 @@ model Branch {
   terminal       Boolean @default(false) // computed at write time from nextBranchIds.length === 0 — do not set independently
   outcome        String? // informational: which Call.outcome this terminal branch typically maps to
   objectionType  String? // only meaningful when type = OBJECTION — see OBJECTION_TYPES in src/lib/types.ts
+  classification String? // only meaningful when type = OBJECTION — see OBJECTION_CLASSIFICATIONS in src/lib/types.ts (receptionist_brush_off vs real_objection vs price_objection etc)
+  whyItWorks     String? // one line explaining the psychology behind the response — shown collapsed by default in the live Navigator
   aiConfidenceThreshold Float? // per-branch override for the confidence bar the AI suggestion must clear to surface
   branchPriority Int     @default(0) // tie-breaker when multiple branches could plausibly match
   abTestGroup    String? // reserved for Phase 7 (A/B testing) — not yet wired to randomization
@@ -100,6 +102,11 @@ model Call {
 
   // Auto-generated rule-based summary (see lib/call-summary.ts) — regenerated on end
   summary              String?
+
+  // Heuristic post-call confidence/assertiveness score (see lib/confidence-score.ts)
+  // — a rule-based V1, not real AI analysis. See README "Confidence scoring".
+  confidenceScore      Int?
+  confidenceBreakdown  String?
 
   // Privacy / recording compliance — see README "Privacy & recording"
   recordingConsent     Boolean? // null = not asked, true/false = rep-recorded answer

@@ -143,6 +143,35 @@ export function validateBranches(branches: ValidatableBranch[]): ValidationRepor
     }
   }
 
+  // Semantic mismatch — cross-branch content contamination: a branch whose
+  // response text is a near-duplicate of a DIFFERENT branch's response text
+  // despite the two having unrelated stages. This is precisely what happened
+  // in the historical incident — "They dislike it" ended up holding the root
+  // branch's opening line instead of its own response. Short generic fillers
+  // ("Fair enough, appreciate it.") are legitimately reused across many
+  // branches, so this only fires on longer text, and same-stage reuse (e.g.
+  // the shared pain-discovery probe reused across the a2-* sub-branches) is
+  // treated as intentional rather than flagged.
+  const byResponseText = new Map<string, ValidatableBranch[]>();
+  for (const b of branches) {
+    const key = b.responseText.trim().toLowerCase();
+    if (key.length < 40) continue; // too short/generic to be meaningful signal
+    byResponseText.set(key, [...(byResponseText.get(key) ?? []), b]);
+  }
+  for (const group of byResponseText.values()) {
+    if (group.length < 2) continue;
+    const stages = new Set(group.map((b) => b.stage));
+    if (stages.size < 2) continue; // same stage reusing text is likely intentional
+    for (const b of group) {
+      warnings.push({
+        severity: "warning",
+        code: "DUPLICATE_RESPONSE_CONTENT",
+        branchId: b.id,
+        message: `Branch "${b.id}" (stage "${b.stage}") has the exact same response text as ${group.length - 1} other branch(es) in different stages (${[...stages].join(", ")}) — check this wasn't copy-pasted from the wrong branch.`,
+      });
+    }
+  }
+
   // Orphans — no incoming reference from anywhere, and not a declared root
   const referenced = new Set<string>();
   for (const b of branches) for (const nextId of b.nextBranchIds) referenced.add(nextId);

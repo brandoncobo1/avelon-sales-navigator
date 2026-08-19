@@ -2,8 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { Trash2, Copy, Save, Eye, EyeOff, Loader2 } from "lucide-react";
-import type { Branch, BranchInput, BranchType, CallOutcome, ObjectionType, Speaker } from "@/lib/types";
-import { BRANCH_TYPES, CALL_OUTCOMES, OBJECTION_TYPES } from "@/lib/types";
+import type {
+  Branch,
+  BranchInput,
+  BranchType,
+  CallOutcome,
+  ObjectionClassification,
+  ObjectionType,
+  Speaker,
+} from "@/lib/types";
+import { BRANCH_TYPES, CALL_OUTCOMES, OBJECTION_CLASSIFICATIONS, OBJECTION_TYPES } from "@/lib/types";
 import { deriveCategory } from "@/lib/branch-category";
 import { ResponseCard } from "@/components/navigator/response-card";
 
@@ -31,6 +39,8 @@ function toFormState(branch: Branch | null): BranchInput {
     isRoot: false,
     outcome: null,
     objectionType: null,
+    classification: null,
+    whyItWorks: null,
     aiConfidenceThreshold: null,
     branchPriority: 0,
     abTestGroup: null,
@@ -205,20 +215,47 @@ export function BranchEditorForm({
             </div>
 
             {form.type === "OBJECTION" && (
-              <Field label="Objection type">
-                <select
-                  value={form.objectionType ?? ""}
-                  onChange={(e) => update("objectionType", (e.target.value || null) as ObjectionType | null)}
-                  className="input"
-                >
-                  <option value="">— none —</option>
-                  {OBJECTION_TYPES.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Classification">
+                    <select
+                      value={form.classification ?? ""}
+                      onChange={(e) => update("classification", (e.target.value || null) as ObjectionClassification | null)}
+                      className="input"
+                    >
+                      <option value="">— none —</option>
+                      {OBJECTION_CLASSIFICATIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Objection type">
+                    <select
+                      value={form.objectionType ?? ""}
+                      onChange={(e) => update("objectionType", (e.target.value || null) as ObjectionType | null)}
+                      className="input"
+                    >
+                      <option value="">— none —</option>
+                      {OBJECTION_TYPES.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+                <Field label="Why this works (shown collapsed in the live Navigator)">
+                  <textarea
+                    value={form.whyItWorks ?? ""}
+                    onChange={(e) => update("whyItWorks", e.target.value || null)}
+                    rows={2}
+                    className="input"
+                    placeholder="Keeps the conversation alive before they've actually heard what it is"
+                  />
+                </Field>
+              </>
             )}
 
             {form.nextBranchIds.length === 0 && (

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { buildCallSummary } from "@/lib/call-summary";
+import { scoreCallConfidence } from "@/lib/confidence-score";
+import { getAllBranches } from "@/lib/branches";
 import type {
   AiSuggestionRecord,
   AiSuggestionStatus,
@@ -45,6 +47,8 @@ function toCall(row: CallRow): Call {
     followUpContactNumber: row.followUpContactNumber,
     followUpNotes: row.followUpNotes,
     summary: row.summary,
+    confidenceScore: row.confidenceScore,
+    confidenceBreakdown: row.confidenceBreakdown,
     recordingConsent: row.recordingConsent,
     recordingStatus: row.recordingStatus as Call["recordingStatus"],
     createdAt: row.createdAt.toISOString(),
@@ -286,11 +290,17 @@ export async function endCall(callId: string, input: EndCallInput): Promise<Call
     },
   });
 
-  // The summary needs the full call-with-relations shape, so build it in a
-  // second pass rather than threading every relation through this update.
+  // The summary and confidence score both need the full call-with-relations
+  // shape, so build them in a second pass rather than threading every
+  // relation through this update.
   const full = await getCall(callId);
   if (!full) throw new Error("Call not found after ending");
   const summary = await buildCallSummary(full);
-  const row = await prisma.call.update({ where: { id: callId }, data: { summary } });
+  const branches = await getAllBranches();
+  const confidence = scoreCallConfidence(full, branches);
+  const row = await prisma.call.update({
+    where: { id: callId },
+    data: { summary, confidenceScore: confidence.total, confidenceBreakdown: JSON.stringify(confidence) },
+  });
   return toCall(row);
 }

@@ -36,6 +36,7 @@ export type ObjectionType =
   | "too_expensive"
   | "happy_with_current"
   | "already_have_software"
+  | "already_have_crm"
   | "already_have_someone"
   | "send_information"
   | "need_to_think"
@@ -48,13 +49,15 @@ export type ObjectionType =
   | "already_tried_similar"
   | "dont_want_to_switch"
   | "concern_implementation"
-  | "concern_switching";
+  | "concern_switching"
+  | "website_confusion";
 
 export const OBJECTION_TYPES: { value: ObjectionType; label: string }[] = [
   { value: "not_interested", label: "Not interested" },
   { value: "too_expensive", label: "Too expensive" },
   { value: "happy_with_current", label: "Happy with current system" },
   { value: "already_have_software", label: "Already have software" },
+  { value: "already_have_crm", label: "Already have a CRM" },
   { value: "already_have_someone", label: "Already have someone doing this" },
   { value: "send_information", label: "Send information" },
   { value: "need_to_think", label: "Need to think" },
@@ -68,6 +71,36 @@ export const OBJECTION_TYPES: { value: ObjectionType; label: string }[] = [
   { value: "dont_want_to_switch", label: "Don't want to switch" },
   { value: "concern_implementation", label: "Concern about implementation" },
   { value: "concern_switching", label: "Concern about switching" },
+  { value: "website_confusion", label: "Thinks this is about a website" },
+];
+
+// Broader bucket than ObjectionType — this is what distinguishes a
+// receptionist screening you off the phone from a decision-maker's actual
+// objection, and drives the CLASSIFICATION label shown in the live
+// objection card. See README "Objection classification."
+export type ObjectionClassification =
+  | "receptionist_brush_off"
+  | "real_objection"
+  | "information_request"
+  | "timing_objection"
+  | "existing_solution_objection"
+  | "price_objection"
+  | "trust_credibility_objection"
+  | "decision_maker_access_objection"
+  | "website_offer_misunderstanding"
+  | "send_me_information";
+
+export const OBJECTION_CLASSIFICATIONS: { value: ObjectionClassification; label: string }[] = [
+  { value: "receptionist_brush_off", label: "Receptionist brush-off" },
+  { value: "real_objection", label: "Real objection" },
+  { value: "information_request", label: "Information request" },
+  { value: "timing_objection", label: "Timing objection" },
+  { value: "existing_solution_objection", label: "Existing-solution objection" },
+  { value: "price_objection", label: "Price objection" },
+  { value: "trust_credibility_objection", label: "Trust / credibility objection" },
+  { value: "decision_maker_access_objection", label: "Decision-maker access" },
+  { value: "website_offer_misunderstanding", label: "Website / offer misunderstanding" },
+  { value: "send_me_information", label: "\"Send me information\"" },
 ];
 
 export interface Branch {
@@ -92,6 +125,8 @@ export interface Branch {
   terminal: boolean; // computed — see lib/branch-utils.ts toBranchWriteData
   outcome: CallOutcome | null;
   objectionType: ObjectionType | null;
+  classification: ObjectionClassification | null;
+  whyItWorks: string | null;
   aiConfidenceThreshold: number | null;
   branchPriority: number;
   abTestGroup: string | null;
@@ -185,6 +220,8 @@ export interface Call {
   followUpContactNumber: string | null;
   followUpNotes: string | null;
   summary: string | null;
+  confidenceScore: number | null;
+  confidenceBreakdown: string | null;
   recordingConsent: boolean | null;
   recordingStatus: "not_recording" | "recording" | "recorded";
   createdAt: string;

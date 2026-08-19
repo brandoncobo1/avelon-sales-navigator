@@ -27,6 +27,13 @@ function outcomeLabel(outcome: string | null) {
   return CALL_OUTCOMES.find((o) => o.value === outcome)?.label ?? outcome;
 }
 
+function scoreColor(score: number) {
+  if (score >= 80) return "text-emerald-300";
+  if (score >= 60) return "text-sky-300";
+  if (score >= 40) return "text-amber-300";
+  return "text-rose-300";
+}
+
 export default async function CallHistoryPage() {
   const calls = await listCalls();
 
@@ -53,6 +60,7 @@ export default async function CallHistoryPage() {
                 <th className="px-4 py-3 font-semibold">Duration</th>
                 <th className="px-4 py-3 font-semibold">Outcome</th>
                 <th className="px-4 py-3 font-semibold">Decision-maker</th>
+                <th className="px-4 py-3 font-semibold">Confidence</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -74,6 +82,13 @@ export default async function CallHistoryPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-white/60">{call.decisionMakerReached ? "Yes" : "No"}</td>
+                  <td className="px-4 py-3">
+                    {call.confidenceScore !== null ? (
+                      <span className={`font-mono font-semibold ${scoreColor(call.confidenceScore)}`}>{call.confidenceScore}</span>
+                    ) : (
+                      <span className="text-white/25">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/history/${call.id}`}

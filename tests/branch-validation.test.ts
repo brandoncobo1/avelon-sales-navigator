@@ -124,3 +124,28 @@ test("regression: a branch mismatch like the historical root/dislike incident is
   assert.equal(root.isRoot, true);
   assert.ok(!report.unreachableBranchIds.includes("root"));
 });
+
+test("catches content contamination: a branch whose response text is actually a different branch's line, reproducing the historical 'They dislike it held the root's opening line' bug", () => {
+  const report = validateBranches([
+    makeBranch({ id: "root", isRoot: true, stage: "opening", responseText: "Hi, this is Isse calling about your patient software — got thirty seconds?", nextBranchIds: ["a2-dislike-it"] }),
+    makeBranch({ id: "a2-dislike-it", stage: "receptionist-software-dislike", responseText: "Hi, this is Isse calling about your patient software — got thirty seconds?", nextBranchIds: [] }),
+  ]);
+  const hit = report.warnings.find((w) => w.code === "DUPLICATE_RESPONSE_CONTENT" && w.branchId === "a2-dislike-it");
+  assert.ok(hit, "expected a2-dislike-it to be flagged for holding the root's response text");
+});
+
+test("does not flag short generic fillers reused across many branches", () => {
+  const report = validateBranches([
+    makeBranch({ id: "a", isRoot: true, stage: "s1", responseText: "Fair enough, appreciate it.", nextBranchIds: [] }),
+    makeBranch({ id: "b", isRoot: true, stage: "s2", responseText: "Fair enough, appreciate it.", nextBranchIds: [] }),
+  ]);
+  assert.ok(!report.warnings.some((w) => w.code === "DUPLICATE_RESPONSE_CONTENT"));
+});
+
+test("does not flag the same response text reused within a single stage (intentional shared probe)", () => {
+  const report = validateBranches([
+    makeBranch({ id: "a", isRoot: true, stage: "pain-discovery", responseText: "Got you — and how does that affect you guys day-to-day?", nextBranchIds: [] }),
+    makeBranch({ id: "b", isRoot: true, stage: "pain-discovery", responseText: "Got you — and how does that affect you guys day-to-day?", nextBranchIds: [] }),
+  ]);
+  assert.ok(!report.warnings.some((w) => w.code === "DUPLICATE_RESPONSE_CONTENT"));
+});

@@ -7,6 +7,7 @@ export function KeyboardLegend() {
     { key: "T", label: "Transcript" },
     { key: "B", label: "Back" },
     { key: "N", label: "Note" },
+    { key: "O", label: "Objections" },
     { key: "E", label: "End call" },
   ];
   return (

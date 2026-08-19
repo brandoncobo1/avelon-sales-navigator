@@ -24,6 +24,8 @@ function toRowData(branch: SeedBranch) {
     terminal: branch.nextBranchIds.length === 0,
     outcome: branch.outcome,
     objectionType: branch.objectionType,
+    classification: branch.classification,
+    whyItWorks: branch.whyItWorks,
     aiConfidenceThreshold: branch.aiConfidenceThreshold,
     branchPriority: branch.branchPriority,
     abTestGroup: branch.abTestGroup,

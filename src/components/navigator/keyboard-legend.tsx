@@ -1,6 +1,10 @@
 export function KeyboardLegend() {
   const items = [
     { key: "1-9", label: "Pick branch" },
+    { key: "Enter", label: "Accept AI" },
+    { key: "Esc", label: "Dismiss" },
+    { key: "Space", label: "Coach" },
+    { key: "T", label: "Transcript" },
     { key: "B", label: "Back" },
     { key: "N", label: "Note" },
     { key: "E", label: "End call" },

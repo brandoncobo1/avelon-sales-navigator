@@ -51,13 +51,24 @@ export async function duplicateBranch(id: string): Promise<Branch> {
 }
 
 export async function searchBranches(query: string): Promise<Branch[]> {
-  const q = query.trim().toLowerCase();
-  if (!q) return getAllBranches();
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return getAllBranches();
   const all = await getAllBranches();
-  return all.filter((b) =>
-    [b.title, b.trigger, b.responseText, b.objective, b.stage, ...b.tags]
+  return all.filter((b) => {
+    const haystack = [
+      b.title,
+      b.trigger,
+      b.responseText,
+      b.objective,
+      b.category,
+      b.stage,
+      ...b.tags,
+      ...b.aiKeywords,
+    ]
       .join(" ")
-      .toLowerCase()
-      .includes(q),
-  );
+      .toLowerCase();
+    // Every word must appear somewhere, not necessarily as one contiguous
+    // phrase — see ChooseBranchModal for the same reasoning.
+    return words.every((w) => haystack.includes(w));
+  });
 }

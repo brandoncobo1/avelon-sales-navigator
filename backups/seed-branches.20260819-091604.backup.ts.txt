@@ -1,5 +1,4 @@
-import type { Branch, BranchType, CallOutcome, ObjectionType, Speaker } from "@/lib/types";
-import { deriveCategory } from "@/lib/branch-category";
+import type { Branch, BranchType, Speaker } from "@/lib/types";
 
 // The full Script 1 (receptionist) conversation tree, plus a full
 // decision-maker tree the receptionist path transfers/routes into.
@@ -11,7 +10,7 @@ import { deriveCategory } from "@/lib/branch-category";
 // one parent — this is a DAG, not a strict tree — e.g. every "who's the
 // decision-maker" moment converges on `sw-f-speak-to-manager`).
 
-export type SeedBranch = Omit<Branch, "createdAt" | "updatedAt" | "terminal"> & { id: string };
+export type SeedBranch = Omit<Branch, "createdAt" | "updatedAt"> & { id: string };
 
 let orderCounter = 0;
 function next() {
@@ -25,7 +24,6 @@ function b(partial: {
   speaker: Speaker;
   type: BranchType;
   stage: string;
-  category?: string;
   trigger: string;
   responseText: string;
   responseAlt?: string;
@@ -33,15 +31,9 @@ function b(partial: {
   notes?: string;
   warning?: string;
   tags?: string[];
-  aiKeywords?: string[];
   nextBranchIds?: string[];
   previousBranchId?: string;
   isRoot?: boolean;
-  outcome?: CallOutcome;
-  objectionType?: ObjectionType;
-  aiConfidenceThreshold?: number;
-  branchPriority?: number;
-  abTestGroup?: string;
 }): SeedBranch {
   return {
     id: partial.id,
@@ -49,7 +41,6 @@ function b(partial: {
     speaker: partial.speaker,
     type: partial.type,
     stage: partial.stage,
-    category: partial.category ?? deriveCategory(partial.stage),
     trigger: partial.trigger,
     responseText: partial.responseText,
     responseAlt: partial.responseAlt ?? null,
@@ -57,75 +48,14 @@ function b(partial: {
     notes: partial.notes ?? null,
     warning: partial.warning ?? null,
     tags: partial.tags ?? [],
-    aiKeywords: partial.aiKeywords ?? [],
     nextBranchIds: partial.nextBranchIds ?? [],
     previousBranchId: partial.previousBranchId ?? null,
     order: next(),
     isRoot: partial.isRoot ?? false,
-    outcome: partial.outcome ?? null,
-    objectionType: partial.objectionType ?? null,
-    aiConfidenceThreshold: partial.aiConfidenceThreshold ?? null,
-    branchPriority: partial.branchPriority ?? 0,
-    abTestGroup: partial.abTestGroup ?? null,
   };
 }
 
-// Applied after the branch list is built, keyed by id, so the objection
-// sub-type and outcome mapping live in one place instead of scattered
-// across ~120 branch literals. See ObjectionType / CallOutcome in
-// src/lib/types.ts for the full option lists.
-const OBJECTION_TYPE_BY_ID: Record<string, ObjectionType> = {
-  "sw-d-why-asking": "dont_understand",
-  "sw-e-are-you-selling": "dont_understand",
-  "sw-m-not-interested": "not_interested",
-  "sw-n-no-time": "no_time",
-  "a2-dislike-it": "already_have_software",
-  "a2-slow": "already_have_software",
-  "a2-missing-functionality": "already_have_software",
-  "a2-followup-problem": "already_have_software",
-  "a2-booking-problem": "already_have_software",
-  "a2-manual-work": "already_have_software",
-  "a2-patient-tracking": "already_have_software",
-  "a2-other": "already_have_software",
-  "dm-what-is-this": "dont_understand",
-  "dm-already-not-interested": "not_interested",
-  "dm-obj-price": "too_expensive",
-  "dm-obj-timing": "no_time",
-  "dm-obj-happy-with-current": "happy_with_current",
-  "dm-obj-send-info": "send_information",
-  "dm-obj-need-to-think": "need_to_think",
-  "dm-obj-not-decision-maker": "need_to_speak_to_partner",
-  "dm-obj-already-tried-something": "already_tried_similar",
-  "dm-obj-still-hesitant": "call_back_later",
-};
-
-const OUTCOME_BY_ID: Record<string, CallOutcome> = {
-  "dm-discovery-confirmed": "discovery_booked",
-  "dm-details-captured": "callback",
-  "sw-g-best-time": "callback",
-  "sw-h-followup-time": "callback",
-  "sw-k-direct-number": "callback",
-  "sw-l-dm-busy": "callback",
-  "sw-n-still-no": "callback",
-  "dm-bad-time": "callback",
-  "dm-callback-time": "callback",
-  "dm-send-info-insist": "information_requested",
-  "sw-p-capture": "referred",
-  "dm-multiple-decision-makers": "callback",
-  "sw-i-no-problem": "not_interested",
-  "sw-m-ends-call": "not_interested",
-  "dm-ends-call-early": "not_interested",
-};
-
-function withOutcomesAndObjectionTypes(branches: SeedBranch[]): SeedBranch[] {
-  return branches.map((branch) => ({
-    ...branch,
-    objectionType: OBJECTION_TYPE_BY_ID[branch.id] ?? branch.objectionType,
-    outcome: OUTCOME_BY_ID[branch.id] ?? branch.outcome,
-  }));
-}
-
-export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
+export const seedBranches: SeedBranch[] = [
   // ---------------------------------------------------------------------
   // ROOT — determine who answered
   // ---------------------------------------------------------------------
@@ -375,7 +305,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "a2-pitch",
-    title: "Impact explained",
+    title: "Continue",
     speaker: "receptionist",
     type: "DECISION_MAKER",
     stage: "receptionist-software-dislike",
@@ -540,7 +470,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "b1-bridge",
-    title: "They describe how they cope",
+    title: "Continue",
     speaker: "receptionist",
     type: "DISCOVERY",
     stage: "receptionist-manual",
@@ -553,7 +483,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "b1-pitch",
-    title: "Positioning acknowledged",
+    title: "Continue",
     speaker: "receptionist",
     type: "DECISION_MAKER",
     stage: "receptionist-manual",
@@ -606,7 +536,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "b2-who-handles",
-    title: "Nothing to automate identified",
+    title: "Continue",
     speaker: "receptionist",
     type: "DECISION_MAKER",
     stage: "receptionist-manual",
@@ -715,7 +645,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-d-continue",
-    title: "They accept the explanation",
+    title: "Continue",
     speaker: "receptionist",
     type: "QUESTION",
     stage: "receptionist-objection",
@@ -745,7 +675,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-e-continue",
-    title: "They accept the clarification",
+    title: "Continue",
     speaker: "receptionist",
     type: "QUESTION",
     stage: "receptionist-objection",
@@ -802,7 +732,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-g-best-time",
-    title: "Message left",
+    title: "Continue",
     speaker: "receptionist",
     type: "CALLBACK",
     stage: "receptionist-transfer",
@@ -830,7 +760,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-h-name",
-    title: "Email captured",
+    title: "Continue",
     speaker: "receptionist",
     type: "CALLBACK",
     stage: "receptionist-transfer",
@@ -843,7 +773,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-h-followup-time",
-    title: "Name captured",
+    title: "Continue",
     speaker: "receptionist",
     type: "CALLBACK",
     stage: "receptionist-transfer",
@@ -872,7 +802,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-i-current-handling",
-    title: "They hear the explanation",
+    title: "Continue",
     speaker: "receptionist",
     type: "QUESTION",
     stage: "receptionist-objection",
@@ -898,7 +828,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-i-ask-mention",
-    title: "Problem identified",
+    title: "Continue",
     speaker: "receptionist",
     type: "SUCCESS",
     stage: "receptionist-objection",
@@ -939,7 +869,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-j-availability",
-    title: "Owner name captured",
+    title: "Continue",
     speaker: "receptionist",
     type: "DECISION_MAKER",
     stage: "receptionist-transfer",
@@ -952,7 +882,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-j-put-through",
-    title: "Availability confirmed",
+    title: "Continue",
     speaker: "receptionist",
     type: "TRANSFER",
     stage: "receptionist-transfer",
@@ -980,7 +910,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-k-direct-number",
-    title: "Callback time set",
+    title: "Continue",
     speaker: "receptionist",
     type: "CALLBACK",
     stage: "receptionist-transfer",
@@ -1112,7 +1042,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "sw-p-capture",
-    title: "Referral role confirmed",
+    title: "Continue",
     speaker: "receptionist",
     type: "SUCCESS",
     stage: "receptionist-transfer",
@@ -1186,7 +1116,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   // Context — why you're calling
   b({
     id: "dm-context",
-    title: "Good time confirmed",
+    title: "Continue",
     speaker: "decision_maker",
     type: "SCRIPT",
     stage: "decision-maker-context",
@@ -1200,7 +1130,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "dm-context-permission",
-    title: "Context given",
+    title: "Continue",
     speaker: "decision_maker",
     type: "QUESTION",
     stage: "decision-maker-context",
@@ -1295,7 +1225,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "dm-software-named",
-    title: "They name the system",
+    title: "Continue",
     speaker: "decision_maker",
     type: "QUESTION",
     stage: "decision-maker-discovery",
@@ -1321,7 +1251,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "dm-manual-detail",
-    title: "They describe the manual process",
+    title: "Continue",
     speaker: "decision_maker",
     type: "DISCOVERY",
     stage: "decision-maker-discovery",
@@ -1422,7 +1352,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   // Bookings
   b({
     id: "dm-bookings-question",
-    title: "Follow-up covered",
+    title: "Continue",
     speaker: "decision_maker",
     type: "DISCOVERY",
     stage: "decision-maker-bookings",
@@ -1464,7 +1394,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   // Reactivation
   b({
     id: "dm-reactivation-question",
-    title: "Bookings covered",
+    title: "Continue",
     speaker: "decision_maker",
     type: "DISCOVERY",
     stage: "decision-maker-reactivation",
@@ -1506,7 +1436,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   // Automation pitch + custom asset
   b({
     id: "dm-automation-pitch",
-    title: "Reactivation gap identified",
+    title: "Continue",
     speaker: "decision_maker",
     type: "DECISION_MAKER",
     stage: "decision-maker-pitch",
@@ -1520,7 +1450,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "dm-custom-asset",
-    title: "Solution presented",
+    title: "Continue",
     speaker: "decision_maker",
     type: "DECISION_MAKER",
     stage: "decision-maker-pitch",
@@ -1668,7 +1598,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "dm-past-failure-detail",
-    title: "They explain what went wrong",
+    title: "Continue",
     speaker: "decision_maker",
     type: "DISCOVERY",
     stage: "decision-maker-objection",
@@ -1695,7 +1625,7 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
   }),
   b({
     id: "dm-callback-time",
-    title: "They're still hesitant",
+    title: "Continue",
     speaker: "decision_maker",
     type: "CALLBACK",
     stage: "decision-maker-objection",
@@ -1734,4 +1664,4 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
     previousBranchId: "dm-discovery-yes",
     nextBranchIds: [],
   }),
-]);
+];

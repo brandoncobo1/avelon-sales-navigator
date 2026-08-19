@@ -1,18 +1,26 @@
 import { prisma } from "@/lib/prisma";
+import { buildCallSummary } from "@/lib/call-summary";
 import type {
+  AiSuggestionRecord,
+  AiSuggestionStatus,
   Call,
   CallEvent,
   CallOutcome,
   CallStatus,
   CallWithRelations,
+  CoachingNoteRecord,
   Note,
   Speaker,
+  TranscriptChunkRecord,
 } from "@/lib/types";
 import type {
   Call as CallRow,
   CallEvent as CallEventRow,
   Note as NoteRow,
   Clinic as ClinicRow,
+  TranscriptChunk as TranscriptChunkRow,
+  AiSuggestion as AiSuggestionRow,
+  CoachingNote as CoachingNoteRow,
 } from "@prisma/client";
 
 function toCall(row: CallRow): Call {
@@ -31,6 +39,14 @@ function toCall(row: CallRow): Call {
     callbackScheduled: row.callbackScheduled,
     discoveryBooked: row.discoveryBooked,
     outcomeNotes: row.outcomeNotes,
+    followUpDate: row.followUpDate ? row.followUpDate.toISOString() : null,
+    followUpTimezone: row.followUpTimezone,
+    followUpContactName: row.followUpContactName,
+    followUpContactNumber: row.followUpContactNumber,
+    followUpNotes: row.followUpNotes,
+    summary: row.summary,
+    recordingConsent: row.recordingConsent,
+    recordingStatus: row.recordingStatus as Call["recordingStatus"],
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -46,11 +62,86 @@ function toCallEvent(row: CallEventRow): CallEvent {
 }
 
 function toNote(row: NoteRow): Note {
+  return { id: row.id, callId: row.callId, text: row.text, timestamp: row.timestamp.toISOString() };
+}
+
+function toTranscriptChunk(row: TranscriptChunkRow): TranscriptChunkRecord {
   return {
     id: row.id,
     callId: row.callId,
+    speaker: row.speaker as Speaker,
     text: row.text,
+    source: row.source as TranscriptChunkRecord["source"],
     timestamp: row.timestamp.toISOString(),
+  };
+}
+
+function toAiSuggestion(row: AiSuggestionRow): AiSuggestionRecord {
+  return {
+    id: row.id,
+    callId: row.callId,
+    transcriptChunkId: row.transcriptChunkId,
+    suggestedBranchId: row.suggestedBranchId,
+    confidence: row.confidence,
+    status: row.status as AiSuggestionStatus,
+    selectedAlternativeBranchId: row.selectedAlternativeBranchId,
+    createdAt: row.createdAt.toISOString(),
+    respondedAt: row.respondedAt ? row.respondedAt.toISOString() : null,
+  };
+}
+
+function toCoachingNote(row: CoachingNoteRow): CoachingNoteRecord {
+  return {
+    id: row.id,
+    callId: row.callId,
+    situation: row.situation,
+    recommendedQuestion: row.recommendedQuestion,
+    trigger: row.trigger as CoachingNoteRecord["trigger"],
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function rowClinicToClinic(row: ClinicRow) {
+  return {
+    id: row.id,
+    name: row.name,
+    website: row.website,
+    phone: row.phone,
+    location: row.location,
+    hasCustomAsset: row.hasCustomAsset,
+    practiceNotes: row.practiceNotes,
+    isDemo: row.isDemo,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+const RELATIONS_INCLUDE = {
+  events: { orderBy: { timestamp: "asc" as const } },
+  notes: { orderBy: { timestamp: "asc" as const } },
+  transcript: { orderBy: { timestamp: "asc" as const } },
+  aiSuggestions: { orderBy: { createdAt: "asc" as const } },
+  coachingNotes: { orderBy: { createdAt: "asc" as const } },
+  clinic: true,
+};
+
+type CallRowWithRelations = CallRow & {
+  events: CallEventRow[];
+  notes: NoteRow[];
+  transcript: TranscriptChunkRow[];
+  aiSuggestions: AiSuggestionRow[];
+  coachingNotes: CoachingNoteRow[];
+  clinic: ClinicRow;
+};
+
+function toCallWithRelations(row: CallRowWithRelations): CallWithRelations {
+  return {
+    ...toCall(row),
+    events: row.events.map(toCallEvent),
+    notes: row.notes.map(toNote),
+    transcript: row.transcript.map(toTranscriptChunk),
+    aiSuggestions: row.aiSuggestions.map(toAiSuggestion),
+    coachingNotes: row.coachingNotes.map(toCoachingNote),
+    clinic: rowClinicToClinic(row.clinic),
   };
 }
 
@@ -75,54 +166,14 @@ export async function createCall(clinicId: string, rootBranchId: string): Promis
 }
 
 export async function getCall(id: string): Promise<CallWithRelations | null> {
-  const row = await prisma.call.findUnique({
-    where: { id },
-    include: { events: { orderBy: { timestamp: "asc" } }, notes: { orderBy: { timestamp: "asc" } }, clinic: true },
-  });
+  const row = await prisma.call.findUnique({ where: { id }, include: RELATIONS_INCLUDE });
   if (!row) return null;
-  return {
-    ...toCall(row),
-    events: row.events.map(toCallEvent),
-    notes: row.notes.map(toNote),
-    clinic: {
-      id: row.clinic.id,
-      name: row.clinic.name,
-      website: row.clinic.website,
-      phone: row.clinic.phone,
-      location: row.clinic.location,
-      hasCustomAsset: row.clinic.hasCustomAsset,
-      practiceNotes: row.clinic.practiceNotes,
-      isDemo: row.clinic.isDemo,
-      createdAt: row.clinic.createdAt.toISOString(),
-    },
-  };
+  return toCallWithRelations(row);
 }
 
 export async function listCalls(): Promise<CallWithRelations[]> {
-  const rows = await prisma.call.findMany({
-    orderBy: { startedAt: "desc" },
-    include: { events: { orderBy: { timestamp: "asc" } }, notes: true, clinic: true },
-  });
-  return rows.map((row) => ({
-    ...toCall(row),
-    events: row.events.map(toCallEvent),
-    notes: row.notes.map(toNote),
-    clinic: rowClinicToClinic(row.clinic),
-  }));
-}
-
-function rowClinicToClinic(row: ClinicRow) {
-  return {
-    id: row.id,
-    name: row.name,
-    website: row.website,
-    phone: row.phone,
-    location: row.location,
-    hasCustomAsset: row.hasCustomAsset,
-    practiceNotes: row.practiceNotes,
-    isDemo: row.isDemo,
-    createdAt: row.createdAt.toISOString(),
-  };
+  const rows = await prisma.call.findMany({ orderBy: { startedAt: "desc" }, include: RELATIONS_INCLUDE });
+  return rows.map(toCallWithRelations);
 }
 
 export async function selectBranch(
@@ -146,6 +197,61 @@ export async function addNote(callId: string, text: string): Promise<Note> {
   return toNote(row);
 }
 
+// --- Transcript -------------------------------------------------------
+
+export async function addTranscriptChunk(
+  callId: string,
+  speaker: Speaker,
+  text: string,
+  source: TranscriptChunkRecord["source"] = "manual",
+): Promise<TranscriptChunkRecord> {
+  const row = await prisma.transcriptChunk.create({ data: { callId, speaker, text, source } });
+  return toTranscriptChunk(row);
+}
+
+// --- AI suggestions -----------------------------------------------------
+// Logging a suggestion NEVER touches Call.currentBranchId — only
+// selectBranch() (called from a rep's explicit accept click) does that.
+// See lib/branch-suggestion.ts and the "AI cannot hijack the branch" tests.
+
+export async function logAiSuggestion(
+  callId: string,
+  transcriptChunkId: string | null,
+  suggestedBranchId: string | null,
+  confidence: number,
+): Promise<AiSuggestionRecord> {
+  const row = await prisma.aiSuggestion.create({
+    data: { callId, transcriptChunkId, suggestedBranchId, confidence },
+  });
+  return toAiSuggestion(row);
+}
+
+export async function respondToAiSuggestion(
+  id: string,
+  status: Exclude<AiSuggestionStatus, "pending">,
+  selectedAlternativeBranchId?: string | null,
+): Promise<AiSuggestionRecord> {
+  const row = await prisma.aiSuggestion.update({
+    where: { id },
+    data: { status, respondedAt: new Date(), selectedAlternativeBranchId: selectedAlternativeBranchId ?? null },
+  });
+  return toAiSuggestion(row);
+}
+
+// --- Coaching -------------------------------------------------------------
+
+export async function addCoachingNote(
+  callId: string,
+  situation: string,
+  recommendedQuestion: string,
+  trigger: CoachingNoteRecord["trigger"] = "manual",
+): Promise<CoachingNoteRecord> {
+  const row = await prisma.coachingNote.create({ data: { callId, situation, recommendedQuestion, trigger } });
+  return toCoachingNote(row);
+}
+
+// --- End of call ------------------------------------------------------
+
 export interface EndCallInput {
   outcome: CallOutcome;
   outcomeNotes?: string | null;
@@ -153,10 +259,15 @@ export interface EndCallInput {
   transferred?: boolean;
   callbackScheduled?: boolean;
   discoveryBooked?: boolean;
+  followUpDate?: string | null;
+  followUpTimezone?: string | null;
+  followUpContactName?: string | null;
+  followUpContactNumber?: string | null;
+  followUpNotes?: string | null;
 }
 
 export async function endCall(callId: string, input: EndCallInput): Promise<Call> {
-  const row = await prisma.call.update({
+  await prisma.call.update({
     where: { id: callId },
     data: {
       status: "ENDED",
@@ -167,7 +278,19 @@ export async function endCall(callId: string, input: EndCallInput): Promise<Call
       transferred: input.transferred ?? false,
       callbackScheduled: input.callbackScheduled ?? false,
       discoveryBooked: input.discoveryBooked ?? false,
+      followUpDate: input.followUpDate ? new Date(input.followUpDate) : null,
+      followUpTimezone: input.followUpTimezone ?? null,
+      followUpContactName: input.followUpContactName ?? null,
+      followUpContactNumber: input.followUpContactNumber ?? null,
+      followUpNotes: input.followUpNotes ?? null,
     },
   });
+
+  // The summary needs the full call-with-relations shape, so build it in a
+  // second pass rather than threading every relation through this update.
+  const full = await getCall(callId);
+  if (!full) throw new Error("Call not found after ending");
+  const summary = await buildCallSummary(full);
+  const row = await prisma.call.update({ where: { id: callId }, data: { summary } });
   return toCall(row);
 }

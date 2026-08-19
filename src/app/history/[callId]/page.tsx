@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowDown, StickyNote } from "lucide-react";
+import { ArrowLeft, ArrowDown, StickyNote, FileText, CalendarClock, Bot, Sparkles } from "lucide-react";
 import { getCall } from "@/lib/calls";
 import { getAllBranches } from "@/lib/branches";
 import { CALL_OUTCOMES } from "@/lib/types";
@@ -71,6 +71,39 @@ export default async function CallDetailPage({
         </div>
       )}
 
+      {call.summary && (
+        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-white/40">
+            <FileText className="h-3.5 w-3.5" />
+            Call summary
+          </div>
+          <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-white/70">{call.summary}</pre>
+        </div>
+      )}
+
+      {(call.followUpDate || call.followUpContactName || call.followUpContactNumber || call.followUpNotes) && (
+        <div className="mt-4 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.06] p-4">
+          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-indigo-300">
+            <CalendarClock className="h-3.5 w-3.5" />
+            Follow-up
+          </div>
+          {call.followUpDate && (
+            <p className="mt-2 text-sm text-white/80">
+              {new Date(call.followUpDate).toLocaleString("en-GB")}
+              {call.followUpTimezone ? ` (${call.followUpTimezone})` : ""}
+            </p>
+          )}
+          {(call.followUpContactName || call.followUpContactNumber) && (
+            <p className="mt-1 text-sm text-white/60">
+              {call.followUpContactName}
+              {call.followUpContactName && call.followUpContactNumber ? " · " : ""}
+              {call.followUpContactNumber}
+            </p>
+          )}
+          {call.followUpNotes && <p className="mt-1 text-sm text-white/50">{call.followUpNotes}</p>}
+        </div>
+      )}
+
       <div className="mt-8">
         <p className="text-xs font-semibold uppercase tracking-wide text-white/40">Branch path</p>
         <div className="mt-3 flex flex-col">
@@ -115,6 +148,40 @@ export default async function CallDetailPage({
                   </p>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {call.coachingNotes.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-white/40">
+            <Sparkles className="h-3.5 w-3.5" />
+            Coaching log
+          </div>
+          <div className="mt-3 space-y-2">
+            {call.coachingNotes.map((note) => (
+              <div key={note.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <p className="text-sm text-white/70">{note.situation}</p>
+                <p className="mt-1 text-sm font-medium text-white/85">Ask: &ldquo;{note.recommendedQuestion}&rdquo;</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {call.transcript.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-white/40">
+            <Bot className="h-3.5 w-3.5" />
+            Transcript
+          </div>
+          <div className="mt-3 space-y-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            {call.transcript.map((chunk) => (
+              <p key={chunk.id} className="text-sm">
+                <span className="font-semibold text-white/70">{chunk.speaker.replace("_", " ")}: </span>
+                <span className="text-white/60">{chunk.text}</span>
+              </p>
             ))}
           </div>
         </div>

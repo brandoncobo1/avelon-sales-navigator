@@ -19,26 +19,35 @@ datasource db {
 
 model Branch {
   id             String  @id @default(cuid())
-  title          String
+  title          String // must describe what happened, e.g. "They dislike current software" — never "Continue"
   speaker        String // "receptionist" | "decision_maker" | "rep" | "system"
   type           String // BranchType — see src/lib/types.ts
-  stage          String // grouping used for filtering in the Builder, e.g. "root", "receptionist-software"
-  trigger        String // when to pick this branch — shown to the rep as the button/context
-  responseText   String // the line the rep should say
+  stage          String // fine-grained grouping used for filtering in the Builder, e.g. "receptionist-software-dislike"
+  category       String  @default("general") // coarse topic grouping shared across trees, e.g. "software", "followup", "objection" — derived from stage, used for search/analytics
+  trigger        String // when to pick this branch — what the prospect said or what happened
+  responseText   String // the line the rep should say — natural, not corporate-script
   responseAlt    String? // optional alternative phrasing
   objective      String // what this line is trying to learn/achieve
   notes          String?
   warning        String?
-  tags           String  @default("[]") // JSON string array
+  tags           String  @default("[]") // JSON string array — doubles as "keywords" for search/AI matching
+  aiKeywords     String  @default("[]") // JSON string array — additional keywords for AI branch matching, may differ from user-facing tags
   nextBranchIds  String  @default("[]") // JSON string array of Branch.id
   previousBranchId String?
   order          Int     @default(0)
   isRoot         Boolean @default(false)
+  terminal       Boolean @default(false) // computed at write time from nextBranchIds.length === 0 — do not set independently
+  outcome        String? // informational: which Call.outcome this terminal branch typically maps to
+  objectionType  String? // only meaningful when type = OBJECTION — see OBJECTION_TYPES in src/lib/types.ts
+  aiConfidenceThreshold Float? // per-branch override for the confidence bar the AI suggestion must clear to surface
+  branchPriority Int     @default(0) // tie-breaker when multiple branches could plausibly match
+  abTestGroup    String? // reserved for Phase 7 (A/B testing) — not yet wired to randomization
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([stage])
+  @@index([category])
   @@index([previousBranchId])
 }
 
@@ -75,17 +84,34 @@ model Call {
   currentBranchId     String?
   speaker             String    @default("receptionist")
 
-  outcome              String? // discovery_booked | decision_maker_reached | callback | sent_info | not_interested | wrong_number | no_decision_maker | other
+  outcome              String? // see CALL_OUTCOMES in src/lib/types.ts
   decisionMakerReached Boolean @default(false)
   transferred          Boolean @default(false)
   callbackScheduled    Boolean @default(false)
   discoveryBooked      Boolean @default(false)
   outcomeNotes         String?
 
+  // Structured follow-up, captured when outcome = callback / follow_up_required
+  followUpDate         DateTime?
+  followUpTimezone     String?
+  followUpContactName  String?
+  followUpContactNumber String?
+  followUpNotes        String?
+
+  // Auto-generated rule-based summary (see lib/call-summary.ts) — regenerated on end
+  summary              String?
+
+  // Privacy / recording compliance — see README "Privacy & recording"
+  recordingConsent     Boolean? // null = not asked, true/false = rep-recorded answer
+  recordingStatus      String  @default("not_recording") // "not_recording" | "recording" | "recorded"
+
   createdAt DateTime @default(now())
 
-  events CallEvent[]
-  notes  Note[]
+  events        CallEvent[]
+  notes         Note[]
+  transcript    TranscriptChunk[]
+  aiSuggestions AiSuggestion[]
+  coachingNotes CoachingNote[]
 
   @@index([clinicId])
   @@index([status])
@@ -108,6 +134,59 @@ model Note {
   call      Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
   text      String
   timestamp DateTime @default(now())
+
+  @@index([callId])
+}
+
+// ---------------------------------------------------------------------------
+// Live transcript + AI suggestion architecture
+//
+// V1 of this system: `source` is always "manual" (the rep types/pastes what
+// was said) and the suggestion engine is the existing keyword-matching mock
+// (src/lib/branch-suggestion.ts). Swapping in real speech-to-text and a real
+// LLM later means changing what feeds these tables, not the schema, the API
+// contract, or the accept/ignore UI — see README "AI architecture".
+// ---------------------------------------------------------------------------
+
+model TranscriptChunk {
+  id        String   @id @default(cuid())
+  callId    String
+  call      Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  speaker   String // "receptionist" | "decision_maker" | "rep" | "system"
+  text      String
+  source    String   @default("manual") // "manual" | "mic" | "import" — how this chunk was captured
+  timestamp DateTime @default(now())
+
+  suggestions AiSuggestion[]
+
+  @@index([callId])
+}
+
+model AiSuggestion {
+  id                     String    @id @default(cuid())
+  callId                 String
+  call                   Call      @relation(fields: [callId], references: [id], onDelete: Cascade)
+  transcriptChunkId      String?
+  transcriptChunk        TranscriptChunk? @relation(fields: [transcriptChunkId], references: [id])
+  suggestedBranchId      String?
+  confidence             Float
+  status                 String    @default("pending") // "pending" | "accepted" | "rejected" | "ignored"
+  selectedAlternativeBranchId String? // if the rep picked a different branch instead — used to measure AI accuracy
+  createdAt              DateTime  @default(now())
+  respondedAt            DateTime?
+
+  @@index([callId])
+  @@index([status])
+}
+
+model CoachingNote {
+  id                 String   @id @default(cuid())
+  callId             String
+  call               Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  situation          String // one line: what's been established so far
+  recommendedQuestion String // one line: the single next question to ask
+  trigger            String   @default("manual") // "manual" (rep clicked Coach Me) | "auto"
+  createdAt          DateTime @default(now())
 
   @@index([callId])
 }

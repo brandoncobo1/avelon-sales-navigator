@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Trash2, Copy, Save, Eye, EyeOff, Loader2 } from "lucide-react";
-import type { Branch, BranchInput, BranchType, Speaker } from "@/lib/types";
-import { BRANCH_TYPES } from "@/lib/types";
+import type { Branch, BranchInput, BranchType, CallOutcome, ObjectionType, Speaker } from "@/lib/types";
+import { BRANCH_TYPES, CALL_OUTCOMES, OBJECTION_TYPES } from "@/lib/types";
+import { deriveCategory } from "@/lib/branch-category";
 import { ResponseCard } from "@/components/navigator/response-card";
 
 const SPEAKERS: Speaker[] = ["receptionist", "decision_maker", "rep", "system"];
@@ -15,6 +16,7 @@ function toFormState(branch: Branch | null): BranchInput {
     speaker: "receptionist",
     type: "SCRIPT",
     stage: "custom",
+    category: "general",
     trigger: "",
     responseText: "",
     responseAlt: null,
@@ -22,10 +24,16 @@ function toFormState(branch: Branch | null): BranchInput {
     notes: null,
     warning: null,
     tags: [],
+    aiKeywords: [],
     nextBranchIds: [],
     previousBranchId: null,
     order: 0,
     isRoot: false,
+    outcome: null,
+    objectionType: null,
+    aiConfidenceThreshold: null,
+    branchPriority: 0,
+    abTestGroup: null,
   };
 }
 
@@ -81,6 +89,7 @@ export function BranchEditorForm({
   const previewBranch: Branch = {
     id: branch?.id ?? "preview",
     ...form,
+    terminal: form.nextBranchIds.length === 0,
     createdAt: branch?.createdAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -173,14 +182,61 @@ export function BranchEditorForm({
               </Field>
             </div>
 
-            <Field label="Stage (grouping)">
-              <input
-                value={form.stage}
-                onChange={(e) => update("stage", e.target.value)}
-                className="input"
-                placeholder="receptionist-software"
-              />
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Stage (fine grouping)">
+                <input
+                  value={form.stage}
+                  onChange={(e) => {
+                    const stage = e.target.value;
+                    setForm((f) => ({ ...f, stage, category: deriveCategory(stage) }));
+                  }}
+                  className="input"
+                  placeholder="receptionist-software"
+                />
+              </Field>
+              <Field label="Category (coarse grouping)">
+                <input
+                  value={form.category}
+                  onChange={(e) => update("category", e.target.value)}
+                  className="input"
+                  placeholder="software"
+                />
+              </Field>
+            </div>
+
+            {form.type === "OBJECTION" && (
+              <Field label="Objection type">
+                <select
+                  value={form.objectionType ?? ""}
+                  onChange={(e) => update("objectionType", (e.target.value || null) as ObjectionType | null)}
+                  className="input"
+                >
+                  <option value="">— none —</option>
+                  {OBJECTION_TYPES.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+
+            {form.nextBranchIds.length === 0 && (
+              <Field label="Outcome (this branch is a dead end — what does it map to?)">
+                <select
+                  value={form.outcome ?? ""}
+                  onChange={(e) => update("outcome", (e.target.value || null) as CallOutcome | null)}
+                  className="input"
+                >
+                  <option value="">— none —</option>
+                  {CALL_OUTCOMES.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
 
             <Field label="Trigger — when to pick this branch">
               <textarea

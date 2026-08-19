@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Plus } from "lucide-react";
+import Link from "next/link";
+import { Search, Plus, ShieldCheck, BarChart3 } from "lucide-react";
 import type { Branch, BranchType } from "@/lib/types";
 import { BRANCH_TYPES } from "@/lib/types";
 import { BRANCH_TYPE_META } from "@/lib/branch-type-meta";
@@ -27,21 +28,37 @@ export function BranchList({
   );
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
     return branches.filter((b) => {
       if (stageFilter !== "all" && b.stage !== stageFilter) return false;
       if (typeFilter !== "all" && b.type !== typeFilter) return false;
-      if (!q) return true;
-      return [b.title, b.trigger, b.responseText, b.objective, ...b.tags]
+      if (words.length === 0) return true;
+      const haystack = [b.title, b.trigger, b.responseText, b.objective, b.category, ...b.tags, ...b.aiKeywords]
         .join(" ")
-        .toLowerCase()
-        .includes(q);
+        .toLowerCase();
+      return words.every((w) => haystack.includes(w));
     });
   }, [branches, search, stageFilter, typeFilter]);
 
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-2 border-b border-white/10 p-3">
+        <div className="flex gap-2">
+          <Link
+            href="/builder/quality"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 text-[11px] font-semibold text-white/60 hover:bg-white/[0.08]"
+          >
+            <ShieldCheck className="h-3 w-3" />
+            Quality
+          </Link>
+          <Link
+            href="/builder/analytics"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 text-[11px] font-semibold text-white/60 hover:bg-white/[0.08]"
+          >
+            <BarChart3 className="h-3 w-3" />
+            Analytics
+          </Link>
+        </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/30" />
           <input

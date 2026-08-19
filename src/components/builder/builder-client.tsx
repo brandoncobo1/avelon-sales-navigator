@@ -5,9 +5,17 @@ import type { Branch, BranchInput } from "@/lib/types";
 import { BranchList } from "@/components/builder/branch-list";
 import { BranchEditorForm } from "@/components/builder/branch-editor-form";
 
-export function BuilderClient({ initialBranches }: { initialBranches: Branch[] }) {
+export function BuilderClient({
+  initialBranches,
+  initialSelectedId,
+}: {
+  initialBranches: Branch[];
+  initialSelectedId?: string | null;
+}) {
   const [branches, setBranches] = useState<Branch[]>(initialBranches);
-  const [selectedId, setSelectedId] = useState<string | null>(initialBranches[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialSelectedId ?? initialBranches[0]?.id ?? null,
+  );
   const [creatingNew, setCreatingNew] = useState(false);
 
   const selected = creatingNew ? null : branches.find((b) => b.id === selectedId) ?? null;

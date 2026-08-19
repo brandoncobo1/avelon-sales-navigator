@@ -48,7 +48,7 @@ export function BranchOptions({
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-widest text-white/40">
-        What happens next?
+        If they say:
       </p>
       <div className="space-y-2">
         {branches.map((branch, i) => {

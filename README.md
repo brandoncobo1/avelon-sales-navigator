@@ -9,7 +9,7 @@ course — it's a sales operating system built specifically around Avelon's proc
 Built for Avelon, selling automation software to UK dental practices, cold-calling
 receptionists who then route to the practice's decision-maker.
 
-Live: **https://avelon-sales-navigator.vercel.app**
+Live: **https://isse-cold-call-software.vercel.app** (also reachable at the original https://avelon-sales-navigator.vercel.app — same deployment, both domains work)
 
 ## What it does
 
@@ -19,6 +19,12 @@ Live: **https://avelon-sales-navigator.vercel.app**
 - **Choose Branch** — a global search across every branch (not just the current node's
   children) by title, trigger, keyword, objective, or category — a manual escape hatch for
   when the conversation doesn't match any of the branches on screen.
+- **"Any moment" quick objections** — a persistent bar in the Navigator (visible on every
+  receptionist/decision-maker branch, not appended to each branch's own next-branch list)
+  for "Not interested," "No time," "Are you selling?," and "Why are you asking?" — because a
+  real prospect can raise any of these at literally any point in the call. Clicking one
+  jumps straight there and logs normally; after it's handled, **Back** returns exactly to
+  where the call was interrupted.
 - **Live transcript + AI suggestion** — the rep can type/paste what was just said; a
   suggestion engine proposes a branch with a confidence score. The rep must explicitly
   **Accept** or **Ignore** it — the app never switches branches on its own. See "AI

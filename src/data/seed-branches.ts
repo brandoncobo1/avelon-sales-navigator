@@ -1734,4 +1734,181 @@ export const seedBranches: SeedBranch[] = withOutcomesAndObjectionTypes([
     previousBranchId: "dm-discovery-yes",
     nextBranchIds: [],
   }),
+
+  // ---------------------------------------------------------------------
+  // UNIVERSAL OBJECTIONS — always available, not just from one parent
+  //
+  // A real prospect can say "not interested" / "no time" / "are you
+  // selling something" at literally any point in the call, not just right
+  // after the opening line. Rather than bolt these onto every single
+  // branch's nextBranchIds (which would flood the "if they say" list on
+  // every screen with the same 3-4 options and defeat the point of a
+  // focused UI), these are surfaced via a persistent "quick objections"
+  // bar in the Navigator that's visible regardless of the current branch —
+  // see components/navigator/quick-objections-bar.tsx. Clicking one still
+  // goes through the exact same handleSelect() path as any other branch
+  // click, so it's logged and shows up in analytics normally.
+  //
+  // isRoot: true here doesn't mean "start of the call" — it means "valid
+  // entry point not reached via a graph edge," which is exactly what lets
+  // branch-validation treat these as intentional rather than orphaned.
+  //
+  // After handling one, the rep just hits Back to resume exactly where
+  // the call was — that's what the "-resume" leaves are for.
+  // ---------------------------------------------------------------------
+
+  // Receptionist-side ------------------------------------------------------
+  b({
+    id: "univ-r-not-interested",
+    title: "Not interested (raised mid-call)",
+    speaker: "receptionist",
+    type: "OBJECTION",
+    stage: "receptionist-objection",
+    trigger: "They say they're not interested — can happen at any point in the call",
+    responseText: "Totally fair — can I ask, not interested in what exactly? Don't want to take up more of your time if it's genuinely not relevant.",
+    objective: "De-escalate and check whether to continue or end gracefully",
+    objectionType: "not_interested",
+    tags: ["objection", "universal"],
+    isRoot: true,
+    nextBranchIds: ["univ-r-resume", "sw-m-ends-call"],
+  }),
+  b({
+    id: "univ-r-resume",
+    title: "They're okay to continue",
+    speaker: "receptionist",
+    type: "SUCCESS",
+    stage: "receptionist-objection",
+    trigger: "The objection is handled and they're happy to keep talking",
+    responseText: "No worries, appreciate you hearing me out.",
+    objective: "Objection handled — hit Back to resume exactly where the call left off",
+    tags: ["success"],
+    previousBranchId: "univ-r-not-interested",
+    nextBranchIds: [],
+  }),
+  b({
+    id: "univ-r-no-time",
+    title: "No time (raised mid-call)",
+    speaker: "receptionist",
+    type: "OBJECTION",
+    stage: "receptionist-objection",
+    trigger: "They say they don't have time — can happen at any point in the call",
+    responseText: "No problem — I'll be quick, literally 20 seconds. That alright?",
+    objective: "Ask for a short window to finish the point",
+    objectionType: "no_time",
+    tags: ["objection", "universal"],
+    isRoot: true,
+    nextBranchIds: ["univ-r-resume", "univ-r-no-time-callback"],
+  }),
+  b({
+    id: "univ-r-no-time-callback",
+    title: "Still no time",
+    speaker: "receptionist",
+    type: "CALLBACK",
+    stage: "receptionist-objection",
+    trigger: "They still don't have time even for 20 seconds",
+    responseText: "No problem — when's a better time to catch you?",
+    objective: "Lock in a callback window",
+    tags: ["callback"],
+    previousBranchId: "univ-r-no-time",
+    nextBranchIds: [],
+  }),
+  b({
+    id: "univ-r-are-you-selling",
+    title: "Are you selling something (raised mid-call)",
+    speaker: "receptionist",
+    type: "OBJECTION",
+    stage: "receptionist-objection",
+    trigger: "They ask if this is a sales call — can happen at any point",
+    responseText: "Honestly, potentially down the line — but right now I'm just trying to understand how you guys handle this, so it's not a pitch.",
+    objective: "Reassure honestly without denying it's potentially a sale, then resume",
+    objectionType: "dont_understand",
+    warning: "Never deny this is potentially a sales call — stay honest.",
+    tags: ["objection", "universal"],
+    isRoot: true,
+    nextBranchIds: ["univ-r-resume"],
+  }),
+  b({
+    id: "univ-r-why-asking",
+    title: "Why are you asking (raised mid-call)",
+    speaker: "receptionist",
+    type: "OBJECTION",
+    stage: "receptionist-objection",
+    trigger: "They ask why you're asking all this — can happen at any point",
+    responseText: "Fair question — I'm a student researching how dental practices handle patient management, just trying to understand what's working for people.",
+    objective: "Reassure, then resume",
+    objectionType: "dont_understand",
+    tags: ["objection", "universal"],
+    isRoot: true,
+    nextBranchIds: ["univ-r-resume"],
+  }),
+
+  // Decision-maker-side ------------------------------------------------------
+  b({
+    id: "univ-dm-not-interested",
+    title: "Not interested (raised mid-call)",
+    speaker: "decision_maker",
+    type: "OBJECTION",
+    stage: "decision-maker-objection",
+    trigger: "They say they're not interested — can happen at any point in the call",
+    responseText: "Totally get it — not interested in what, though? Two minutes, and if it's not relevant I'll let you go.",
+    objective: "De-escalate and check whether to continue or end gracefully",
+    objectionType: "not_interested",
+    tags: ["decision-maker", "objection", "universal"],
+    isRoot: true,
+    nextBranchIds: ["univ-dm-resume", "dm-ends-call-early"],
+  }),
+  b({
+    id: "univ-dm-resume",
+    title: "They're okay to continue",
+    speaker: "decision_maker",
+    type: "SUCCESS",
+    stage: "decision-maker-objection",
+    trigger: "The objection is handled and they're happy to keep talking",
+    responseText: "Appreciate that.",
+    objective: "Objection handled — hit Back to resume exactly where the call left off",
+    tags: ["decision-maker", "success"],
+    previousBranchId: "univ-dm-not-interested",
+    nextBranchIds: [],
+  }),
+  b({
+    id: "univ-dm-no-time",
+    title: "No time / too busy (raised mid-call)",
+    speaker: "decision_maker",
+    type: "OBJECTION",
+    stage: "decision-maker-objection",
+    trigger: "They say they're busy or don't have time — can happen at any point",
+    responseText: "Completely understand — two minutes, and I'm not asking you to decide anything today. Alright?",
+    objective: "Ask for two minutes, then resume",
+    objectionType: "no_time",
+    tags: ["decision-maker", "objection", "universal"],
+    isRoot: true,
+    nextBranchIds: ["univ-dm-resume", "univ-dm-no-time-callback"],
+  }),
+  b({
+    id: "univ-dm-no-time-callback",
+    title: "Still too busy",
+    speaker: "decision_maker",
+    type: "CALLBACK",
+    stage: "decision-maker-objection",
+    trigger: "They're still too busy even for two minutes",
+    responseText: "No problem — when's generally a better time?",
+    objective: "Lock in a callback window",
+    tags: ["decision-maker", "callback"],
+    previousBranchId: "univ-dm-no-time",
+    nextBranchIds: [],
+  }),
+  b({
+    id: "univ-dm-are-you-selling",
+    title: "What's this about (raised mid-call)",
+    speaker: "decision_maker",
+    type: "OBJECTION",
+    stage: "decision-maker-objection",
+    trigger: "They ask what this call is really about — can happen at any point",
+    responseText: "Fair question — we help dental practices automate follow-ups, reactivation and bookings. Not trying to sell you anything right now, just understand your setup first.",
+    objective: "Reassure honestly, then resume",
+    objectionType: "dont_understand",
+    tags: ["decision-maker", "objection", "universal"],
+    isRoot: true,
+    nextBranchIds: ["univ-dm-resume"],
+  }),
 ]);

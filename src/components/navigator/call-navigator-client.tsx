@@ -15,6 +15,8 @@ import type {
 } from "@/lib/types";
 import { heuristicCoach } from "@/lib/call-coach";
 import { callGoal } from "@/lib/call-goal";
+import { quickObjectionsFor } from "@/lib/quick-objections";
+import { QuickObjectionsBar } from "@/components/navigator/quick-objections-bar";
 import { CallTopBar } from "@/components/navigator/call-top-bar";
 import { Breadcrumb } from "@/components/navigator/breadcrumb";
 import { ResponseCard } from "@/components/navigator/response-card";
@@ -108,6 +110,8 @@ export function CallNavigatorClient({
   // Passive "DO NOT PITCH YET" check — pure/local, no network call, so it's
   // always instant and reflects the current branch on every render.
   const doNotPitch = useMemo(() => heuristicCoach(currentBranch ?? null, trail).doNotPitchYet, [currentBranch, trail]);
+
+  const quickObjections = useMemo(() => quickObjectionsFor(speaker), [speaker]);
 
   const pendingSuggestion = useMemo(
     () => [...suggestions].reverse().find((s) => s.status === "pending") ?? null,
@@ -383,6 +387,13 @@ export function CallNavigatorClient({
           </div>
 
           <StateHeader trail={trail} goal={goal} />
+
+          <QuickObjectionsBar
+            objections={quickObjections}
+            branchMap={branchMap}
+            currentBranchId={currentBranch.id}
+            onSelect={handleSelect}
+          />
 
           {doNotPitch && <DoNotPitchBanner recommendedQuestion={heuristicCoach(currentBranch, trail).recommendedQuestion} />}
 

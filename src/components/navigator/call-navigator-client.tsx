@@ -17,7 +17,7 @@ import type {
 import { heuristicCoach } from "@/lib/call-coach";
 import { callGoal } from "@/lib/call-goal";
 import { quickObjectionsFor } from "@/lib/quick-objections";
-import { QuickObjectionsBar } from "@/components/navigator/quick-objections-bar";
+import { ObjectionsPanel } from "@/components/navigator/objections-panel";
 import { CallTopBar } from "@/components/navigator/call-top-bar";
 import { Breadcrumb } from "@/components/navigator/breadcrumb";
 import { ResponseCard } from "@/components/navigator/response-card";
@@ -406,96 +406,95 @@ export function CallNavigatorClient({
       />
 
       <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white/60">
-                {speaker.replace("_", " ")}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setChooseBranchObjectionsOnly(false);
-                  setChooseBranchOpen(true);
-                }}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-white/60 hover:bg-white/[0.08]"
-              >
-                <Search className="h-3 w-3" />
-                Choose branch
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setChooseBranchObjectionsOnly(true);
-                  setChooseBranchOpen(true);
-                }}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-300 hover:bg-indigo-500/20"
-                title="Search all objections (shortcut: O)"
-              >
-                <ShieldAlert className="h-3 w-3" />
-                Objections
-              </button>
-              <button
-                type="button"
-                onClick={handleCoachMe}
-                disabled={coaching}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-300 hover:bg-indigo-500/20 disabled:opacity-50"
-              >
-                <Sparkles className="h-3 w-3" />
-                Coach me
-              </button>
+        <div className="mx-auto flex max-w-[1400px] flex-col gap-4 lg:grid lg:grid-cols-[7fr_3fr] lg:items-start">
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white/60">
+                  {speaker.replace("_", " ")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChooseBranchObjectionsOnly(false);
+                    setChooseBranchOpen(true);
+                  }}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-white/60 hover:bg-white/[0.08]"
+                >
+                  <Search className="h-3 w-3" />
+                  Choose branch
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChooseBranchObjectionsOnly(true);
+                    setChooseBranchOpen(true);
+                  }}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-300 hover:bg-indigo-500/20"
+                  title="Search all objections (shortcut: O)"
+                >
+                  <ShieldAlert className="h-3 w-3" />
+                  Objections
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCoachMe}
+                  disabled={coaching}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-300 hover:bg-indigo-500/20 disabled:opacity-50"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Coach me
+                </button>
+              </div>
+              <Breadcrumb trail={trail} onJump={handleJump} onHome={() => handleJump(0)} />
             </div>
-            <Breadcrumb trail={trail} onJump={handleJump} onHome={() => handleJump(0)} />
-          </div>
 
-          {!confidenceBannerDismissed && (
-            <ConfidenceModeBanner onDismiss={() => setConfidenceBannerDismissed(true)} />
-          )}
+            {!confidenceBannerDismissed && (
+              <ConfidenceModeBanner onDismiss={() => setConfidenceBannerDismissed(true)} />
+            )}
 
-          <StateHeader trail={trail} goal={goal} />
+            <StateHeader trail={trail} goal={goal} />
 
-          <QuickObjectionsBar
-            objections={quickObjections}
-            branchMap={branchMap}
-            currentBranchId={currentBranch.id}
-            onSelect={handleSelect}
-          />
+            {doNotPitch && <DoNotPitchBanner recommendedQuestion={heuristicCoach(currentBranch, trail).recommendedQuestion} />}
 
-          {doNotPitch && <DoNotPitchBanner recommendedQuestion={heuristicCoach(currentBranch, trail).recommendedQuestion} />}
-
-          {coachResult && (
-            <CoachPanel
-              situation={coachResult.situation}
-              recommendedQuestion={coachResult.recommendedQuestion}
-              onClose={() => setCoachResult(null)}
-            />
-          )}
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-            <div className="lg:col-span-3">
-              <ResponseCard branch={currentBranch} pulseKey={pulseKey} />
-            </div>
-            <div className="lg:col-span-2">
-              <BranchOptions
-                branches={nextBranches}
-                onSelect={handleSelect}
-                onBack={handleBack}
-                onEndCall={() => setOutcomeModalOpen(true)}
-                canGoBack={history.length > 1}
+            {coachResult && (
+              <CoachPanel
+                situation={coachResult.situation}
+                recommendedQuestion={coachResult.recommendedQuestion}
+                onClose={() => setCoachResult(null)}
               />
+            )}
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+              <div className="lg:col-span-3">
+                <ResponseCard branch={currentBranch} pulseKey={pulseKey} />
+              </div>
+              <div className="lg:col-span-2">
+                <BranchOptions
+                  branches={nextBranches}
+                  onSelect={handleSelect}
+                  onBack={handleBack}
+                  onEndCall={() => setOutcomeModalOpen(true)}
+                  canGoBack={history.length > 1}
+                />
+              </div>
             </div>
+
+            <TranscriptPanel
+              open={transcriptOpen}
+              onToggle={() => setTranscriptOpen((o) => !o)}
+              transcript={transcript}
+              pendingSuggestion={pendingSuggestion}
+              suggestedBranch={suggestedBranch}
+              onSubmitChunk={handleSubmitTranscriptChunk}
+              onAcceptSuggestion={handleAcceptSuggestion}
+              onIgnoreSuggestion={handleIgnoreSuggestion}
+            />
           </div>
 
-          <TranscriptPanel
-            open={transcriptOpen}
-            onToggle={() => setTranscriptOpen((o) => !o)}
-            transcript={transcript}
-            pendingSuggestion={pendingSuggestion}
-            suggestedBranch={suggestedBranch}
-            onSubmitChunk={handleSubmitTranscriptChunk}
-            onAcceptSuggestion={handleAcceptSuggestion}
-            onIgnoreSuggestion={handleIgnoreSuggestion}
-          />
+          <div className="lg:sticky lg:top-4">
+            <ObjectionsPanel objections={quickObjections} branchMap={branchMap} />
+          </div>
         </div>
       </div>
 

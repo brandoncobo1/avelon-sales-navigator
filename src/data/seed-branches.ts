@@ -262,8 +262,9 @@ export const seedBranches: SeedBranch[] = finalizeBranches([
     stage: "receptionist-intro",
     trigger: "They agree to answer a quick question",
     responseText:
-      "Perfect. So I'm a student doing some research, just wondering — do you guys use any software to track your clients, or pen and paper still?",
+      "Perfect — quick one for you: do you guys use any software to track your clients and follow-ups, or still pen and paper?",
     objective: "Find out what system (if any) the practice uses",
+    warning: "Never claim to be a student or invent an unrelated cover story — ask plainly.",
     tags: ["discovery", "software"],
     previousBranchId: "who-receptionist",
     nextBranchIds: [
@@ -1102,8 +1103,9 @@ export const seedBranches: SeedBranch[] = finalizeBranches([
     stage: "receptionist-objection",
     trigger: "They soften and keep talking",
     responseText:
-      "Perfect. So I'm a student doing some research, just wondering — do you guys use any software to track your clients, or pen and paper still?",
+      "Appreciate it — quick one: do you guys use any software to track your clients and follow-ups, or still pen and paper?",
     objective: "Re-enter system discovery",
+    warning: "Never claim to be a student or invent an unrelated cover story — ask plainly.",
     tags: ["discovery"],
     previousBranchId: "sw-m-not-interested",
     nextBranchIds: ["sw-a-use-software", "sw-b-pen-paper", "sw-c-dont-know"],
@@ -2103,9 +2105,10 @@ export const seedBranches: SeedBranch[] = finalizeBranches([
     type: "OBJECTION",
     stage: "receptionist-objection",
     trigger: "They ask why you're asking all this — can happen at any point",
-    responseText: "Fair question — I'm a student researching how dental practices handle patient management, just trying to understand what's working for people.",
+    responseText: "Fair question — I work with dental practices on the enquiries and follow-up side, just trying to understand what's working for people at the minute.",
     objective: "Reassure, then resume",
     whyItWorks: "A direct, honest answer closes the question instead of inviting more suspicion.",
+    warning: "Never claim to be a student or invent an unrelated cover story — answer plainly with what you're actually calling about.",
     objectionType: "dont_understand",
     aiKeywords: ["why are you asking", "why do you want to know"],
     tags: ["objection", "universal"],

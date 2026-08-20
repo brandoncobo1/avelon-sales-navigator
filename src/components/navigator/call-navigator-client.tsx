@@ -6,6 +6,7 @@ import { StickyNote, RotateCcw, ArrowLeft, AlertTriangle, Search, Sparkles, Shie
 import type {
   AiSuggestionRecord,
   Branch,
+  CallEvent,
   CallOutcome,
   CallStatus,
   CallWithRelations,
@@ -93,6 +94,41 @@ export function CallNavigatorClient({
     return () => clearInterval(interval);
   }, []);
 
+  // How many CallEvent rows we expect to exist server-side because of our
+  // OWN actions — bumped once per persistBranch() call below (every branch
+  // change, including Back/Jump, appends exactly one event). The poll effect
+  // compares this against the server's real count so it can tell "someone
+  // else just moved this call forward" (a second device/browser on the same
+  // call — see /remote-control) apart from our own action still in flight.
+  const expectedEventCountRef = useRef(initialHistory.length);
+
+  useEffect(() => {
+    if (status === "ENDED") return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/calls/${call.id}`);
+        if (!res.ok) return;
+        const { call: fresh } = (await res.json()) as { call: CallWithRelations | null };
+        if (!fresh) return;
+
+        if (fresh.events.length > expectedEventCountRef.current) {
+          expectedEventCountRef.current = fresh.events.length;
+          setHistory(fresh.events.map((e: CallEvent) => ({ branchId: e.branchId, timestamp: e.timestamp })));
+          setSpeaker(fresh.speaker);
+          setPulseKey((k) => k + 1);
+        }
+
+        if (fresh.status !== statusRef.current) {
+          setStatus(fresh.status);
+          if (fresh.status === "ENDED") router.push(`/history/${call.id}`);
+        }
+      } catch {
+        // Cross-device sync is a convenience — never break the call over a flaky poll.
+      }
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [call.id, router, status]);
+
   const currentBranchId = history[history.length - 1]?.branchId ?? "root";
   const currentBranch = branchMap.get(currentBranchId);
 
@@ -126,6 +162,11 @@ export function CallNavigatorClient({
 
   const persistBranch = useCallback(
     (branchId: string, nextSpeaker: Speaker) => {
+      // Every call here results in exactly one new CallEvent row server-side
+      // (selectBranch() always appends, even for Back/Jump) — bump in
+      // lockstep so the poll effect above can tell our own action apart from
+      // a genuinely external one made from another device.
+      expectedEventCountRef.current += 1;
       fetch(`/api/calls/${call.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

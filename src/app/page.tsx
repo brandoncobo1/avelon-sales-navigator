@@ -12,6 +12,7 @@ import {
   MessageSquare,
   ShieldAlert,
   Trophy,
+  Smartphone,
 } from "lucide-react";
 import { getDashboardStats } from "@/lib/stats";
 import { StatCard } from "@/components/ui/stat-card";
@@ -63,6 +64,14 @@ export default async function DashboardPage() {
           </button>
         </form>
       </div>
+
+      <Link
+        href="/remote-control"
+        className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-white/45 transition-colors duration-150 hover:text-white/75"
+      >
+        <Smartphone className="h-4 w-4" />
+        Remote control a live call from another device
+      </Link>
 
       <div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
         <StatCard label="Total calls" value={stats.totalCalls} icon={BarChart3} />

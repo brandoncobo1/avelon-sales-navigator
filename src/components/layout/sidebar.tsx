@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Phone, Workflow, History, Settings, Navigation } from "lucide-react";
+import { LayoutDashboard, Phone, Workflow, History, Settings, Navigation, Smartphone } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/call/new", label: "Call Navigator", icon: Phone },
+  { href: "/remote-control", label: "Remote Control", icon: Smartphone },
   { href: "/builder", label: "Conversation Builder", icon: Workflow },
   { href: "/history", label: "Call History", icon: History },
   { href: "/settings", label: "Settings", icon: Settings },
